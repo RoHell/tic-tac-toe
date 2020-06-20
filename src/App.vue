@@ -4,134 +4,67 @@
       new game
     </button>
     <div class="board">
-      <div class="player">
-        {{ playerOne }}
-        {{ playerOneScore }}
-      </div>
-      <div class="playground">
-        <div
-          v-for="(player, idx) in boxes"
-          :key="idx"
-          class="playground-box"
-          :class="{
-            'playground-box--disabled': player || isWinningCombination
-          }"
-          @click="pick(idx)"
-        >
-          <div
-            class="playground-box__content"
-            :class="{
-              'playground-box__content--winner':
-                isWinningCombination && winningCombination.includes(idx)
-            }"
-          >
-            {{ player }}
-          </div>
-        </div>
-      </div>
-      <div class="player">
-        {{ playerTwo }}
-        {{ playerTwoScore }}
-      </div>
+      <Player :player="players['playerOne']" />
+      <Playground :players="players" @pick="onPick" @win="onWin" @tie="onTie" />
+      <Player :player="players['playerTwo']" />
     </div>
-    <button v-if="showNext" @click="next" class="action-button">
-      next
-    </button>
-    <div class="message" v-if="isFinal">{{ `${currentPlayer} wins! 🎉` }}</div>
+    <div class="message">{{ message }}</div>
   </div>
 </template>
 
 <script>
+import Player from "./components/Player.vue";
+import Playground from "./components/Playground.vue";
 export default {
+  components: {
+    Player,
+    Playground
+  },
   data() {
     return {
-      // eslint-disable-next-line prettier/prettier
-      boxes: [
-        "", "", "",
-        "", "", "",
-        "", "", ""
-      ],
-      round: 1,
       message: "",
-      playerOne: "👦",
-      playerTwo: "👨‍🦲",
-      playerOneScore: 0,
-      playerTwoScore: 0
+      players: {},
+      playerOneAvatar: "",
+      playerTwoAvatar: ""
     };
   },
   computed: {
-    combinations() {
-      return [
-        [0, 1, 2],
-        [3, 4, 5],
-        [6, 7, 8],
-        [0, 3, 6],
-        [1, 4, 7],
-        [2, 5, 8],
-        [0, 4, 8],
-        [2, 4, 6]
-      ];
-    },
-    turn() {
-      return this.round % 2 === 0;
-    },
-    currentPlayer() {
-      return this.turn ? this.playerOne : this.playerTwo;
-    },
-    currentPlayerCombinations() {
-      return this.boxes.reduce((acc, box, idx) => {
-        return box && box === this.currentPlayer ? [...acc, idx] : acc;
-      }, []);
-    },
-    winningCombination() {
-      const combination = this.combinations.filter(combination => {
-        return combination.every(idx =>
-          this.currentPlayerCombinations.includes(idx)
-        );
-      });
-      return combination[0] || [];
-    },
-    isWinningCombination() {
-      return this.winningCombination.length > 0;
-    },
-    isFinal() {
-      return (this.playerOneScore || this.playerTwoScore) === 4;
-    },
-    showNext() {
-      return (this.isWinningCombination && !this.isFinal) || this.isTie;
-    },
-    isTie() {
-      return this.boxes.every(b => b);
+    defaultPlayers() {
+      return {
+        playerOne: {
+          id: "playerOne",
+          name: "Player One",
+          avatar: this.playerOneAvatar || "👦",
+          score: 0
+        },
+        playerTwo: {
+          id: "playerTwo",
+          name: "Player Two",
+          avatar: this.playerTwoAvatar || "👨‍🦲",
+          score: 0
+        }
+      };
     }
   },
+  created() {
+    this.players = JSON.parse(JSON.stringify(this.defaultPlayers));
+  },
   methods: {
-    pick(idx) {
-      this.boxes.splice(idx, 1, this.currentPlayer);
-      this.check();
-    },
-    check() {
-      if (this.isWinningCombination) {
-        this.setScore();
-      } else {
-        this.round++;
-      }
-    },
-    setScore() {
-      if (this.currentPlayer === this.playerOne) {
-        this.playerOneScore += 1;
-      } else {
-        this.playerTwoScore += 1;
-      }
-    },
-    next() {
-      this.boxes = ["", "", "", "", "", "", "", "", ""];
+    onPick(player) {
+      this.players[player.id] = player;
     },
     newGame() {
-      this.playerOneScore = 0;
-      this.playerTwoScore = 0;
-      this.round = 1;
+      this.players = JSON.parse(JSON.stringify(this.defaultPlayers));
       this.message = "";
-      this.next();
+    },
+    onWin(player) {
+      this.message = `${player.avatar} wins! 🎉`;
+    },
+    onTie() {
+      this.message = "It's a tie";
+      setTimeout(() => {
+        this.message = "";
+      }, 2000);
     }
   }
 };
@@ -146,55 +79,6 @@ export default {
 }
 .board {
   display: flex;
-}
-.player {
-  font-size: 5rem;
-  margin: auto;
-}
-.playground {
-  width: 306px;
-  grid-template-columns: repeat(3, 1fr);
-  grid-template-rows: repeat(3, 100px);
-  grid-gap: 3px;
-  display: grid;
-  background-color: #ccc;
-  margin: 60px auto;
-
-  &-box {
-    background: #fff;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    width: 100px;
-    cursor: pointer;
-  }
-
-  &-box:hover {
-    background: #fafafa;
-  }
-
-  &-box--disabled {
-    pointer-events: none;
-    cursor: default;
-  }
-
-  &-box__content {
-    font-size: 4rem;
-    color: #444;
-  }
-
-  &-box__content--winner {
-    color: #000;
-    animation: happy 1s linear infinite;
-  }
-}
-@keyframes happy {
-  25% {
-    transform: rotate(-20deg);
-  }
-  75% {
-    transform: rotate(20deg);
-  }
 }
 .message {
   font-size: 6rem;
