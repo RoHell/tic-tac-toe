@@ -4,7 +4,13 @@
       new game
     </button>
     <div class="tic-tac-toe__board">
-      <Player :player="players['playerOne']" />
+      <div class="tic-tac-toe__board-player">
+        <PlayerPicker
+          :avatar="players['playerOne'].avatar"
+          @pick="players['playerOne'].avatar = $event"
+        />
+        <Player :player="players['playerOne']" />
+      </div>
       <div class="tic-tac-toe__board-playground">
         <div
           v-for="(player, idx) in boxes"
@@ -12,7 +18,7 @@
           class="tic-tac-toe__board-playground-box"
           :class="{
             'tic-tac-toe__board-playground-box--disabled':
-              player || isWinningCombination || isFinal
+              player || isWinner || isFinal
           }"
           @click="pick(idx)"
         >
@@ -20,14 +26,20 @@
             class="tic-tac-toe__board-playground-box__content"
             :class="{
               'tic-tac-toe__board-playground-box__content--winner':
-                isWinningCombination && winningCombination.includes(idx)
+                isWinner && winningCombination.includes(idx)
             }"
           >
             {{ player }}
           </div>
         </div>
       </div>
-      <Player :player="players['playerTwo']" />
+      <div class="tic-tac-toe__board-player">
+        <PlayerPicker
+          :avatar="players['playerTwo'].avatar"
+          @pick="players['playerTwo'].avatar = $event"
+        />
+        <Player :player="players['playerTwo']" />
+      </div>
     </div>
     <div class="tic-tac-toe__result-message">{{ message }}</div>
   </div>
@@ -35,9 +47,11 @@
 
 <script>
 import Player from "./Player.vue";
+import PlayerPicker from "./PlayerPicker.vue";
 export default {
   components: {
-    Player
+    Player,
+    PlayerPicker
   },
   data() {
     return {
@@ -49,9 +63,7 @@ export default {
       ],
       message: "",
       round: 1,
-      players: {},
-      playerOneAvatar: "",
-      playerTwoAvatar: ""
+      players: {}
     };
   },
   computed: {
@@ -60,13 +72,13 @@ export default {
         playerOne: {
           id: "playerOne",
           name: "Player One",
-          avatar: this.playerOneAvatar || "👦",
+          avatar: "👦",
           score: 0
         },
         playerTwo: {
           id: "playerTwo",
           name: "Player Two",
-          avatar: this.playerTwoAvatar || "👨‍🦲",
+          avatar: "👨‍🦲",
           score: 0
         }
       };
@@ -106,18 +118,15 @@ export default {
       }, []);
     },
     winningCombination() {
-      const combination = this.combinations.filter(combination => {
-        return combination.every(idx =>
+      return this.combinations.reduce((acc, combination) => {
+        const isWinningCombination = combination.every(idx =>
           this.currentPlayerCombinations.includes(idx)
         );
-      });
-      return combination[0] || [];
+        return isWinningCombination ? combination : acc;
+      }, []);
     },
-    isWinningCombination() {
+    isWinner() {
       return this.winningCombination.length > 0;
-    },
-    showNext() {
-      return (this.isWinningCombination && !this.isFinal) || this.isTie;
     },
     isTie() {
       return this.boxes.every(b => b);
@@ -135,38 +144,35 @@ export default {
       this.check();
     },
     check() {
-      if (this.isWinningCombination) {
-        this.setScore();
+      if (this.isWinner) {
+        this.players[this.currentPlayerId].score += 1;
+        if (this.isFinal) {
+          this.message = `${this.currentPlayer.avatar} wins! 🎉`;
+          this.round = 1;
+        } else {
+          this.setTimeoutMessage(`${this.currentPlayer.avatar} scores!`);
+        }
       } else if (this.isTie) {
-        this.message = "It's a tie";
-        setTimeout(() => {
-          this.message = "";
-        }, 2000);
-        this.setScore();
+        this.setTimeoutMessage("It's a tie");
       } else {
         this.round++;
       }
     },
-    setScore() {
-      let players = { ...this.players };
+    setTimeoutMessage(message) {
+      this.message = message;
       setTimeout(() => {
-        if (!this.isTie) {
-          players[this.currentPlayerId].score += 1;
-          this.players[this.currentPlayerId] = this.currentPlayer;
-        }
-        this.next();
+        this.message = "";
+        this.clearBoard();
       }, 2000);
     },
-    next() {
+    clearBoard() {
       this.boxes = ["", "", "", "", "", "", "", "", ""];
-      if (this.isFinal) {
-        this.message = `${this.currentPlayer.avatar} wins! 🎉`;
-        this.round = 1;
-      }
     },
     newGame() {
       this.players = JSON.parse(JSON.stringify(this.defaultPlayers));
       this.message = "";
+      this.round = 1;
+      this.clearBoard();
     }
   }
 };
@@ -175,6 +181,7 @@ export default {
 <style lang="scss" scoped>
 .tic-tac-toe__board {
   display: flex;
+  align-items: center;
 }
 .tic-tac-toe__board-playground {
   width: 306px;
