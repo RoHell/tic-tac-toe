@@ -10,7 +10,7 @@ export default {
   props: {
     player: {
       type: Object,
-      default: () => ({})
+      required: true
     }
   }
 };

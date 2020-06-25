@@ -1,34 +1,43 @@
 <template>
-  <div class="playground">
-    <div
-      v-for="(player, idx) in boxes"
-      :key="idx"
-      class="playground-box"
-      :class="{
-        'playground-box--disabled': player || isWinningCombination || isFinal
-      }"
-      @click="pick(idx)"
-    >
-      <div
-        class="playground-box__content"
-        :class="{
-          'playground-box__content--winner':
-            isWinningCombination && winningCombination.includes(idx)
-        }"
-      >
-        {{ player }}
+  <div class="tic-tac-toe">
+    <button @click="newGame" class="action-button">
+      new game
+    </button>
+    <div class="tic-tac-toe__board">
+      <Player :player="players['playerOne']" />
+      <div class="tic-tac-toe__board-playground">
+        <div
+          v-for="(player, idx) in boxes"
+          :key="idx"
+          class="tic-tac-toe__board-playground-box"
+          :class="{
+            'tic-tac-toe__board-playground-box--disabled':
+              player || isWinningCombination || isFinal
+          }"
+          @click="pick(idx)"
+        >
+          <div
+            class="tic-tac-toe__board-playground-box__content"
+            :class="{
+              'tic-tac-toe__board-playground-box__content--winner':
+                isWinningCombination && winningCombination.includes(idx)
+            }"
+          >
+            {{ player }}
+          </div>
+        </div>
       </div>
+      <Player :player="players['playerTwo']" />
     </div>
+    <div class="tic-tac-toe__result-message">{{ message }}</div>
   </div>
 </template>
 
 <script>
+import Player from "./Player.vue";
 export default {
-  props: {
-    players: {
-      type: Object,
-      dafault: null
-    }
+  components: {
+    Player
   },
   data() {
     return {
@@ -38,10 +47,30 @@ export default {
         "", "", "",
         "", "", ""
       ],
-      round: 1
+      message: "",
+      round: 1,
+      players: {},
+      playerOneAvatar: "",
+      playerTwoAvatar: ""
     };
   },
   computed: {
+    defaultPlayers() {
+      return {
+        playerOne: {
+          id: "playerOne",
+          name: "Player One",
+          avatar: this.playerOneAvatar || "👦",
+          score: 0
+        },
+        playerTwo: {
+          id: "playerTwo",
+          name: "Player Two",
+          avatar: this.playerTwoAvatar || "👨‍🦲",
+          score: 0
+        }
+      };
+    },
     combinations() {
       return [
         [0, 1, 2],
@@ -97,6 +126,9 @@ export default {
       return this.currentPlayerScore === 3;
     }
   },
+  created() {
+    this.players = JSON.parse(JSON.stringify(this.defaultPlayers));
+  },
   methods: {
     pick(idx) {
       this.boxes.splice(idx, 1, this.currentPlayerAvatar);
@@ -106,7 +138,10 @@ export default {
       if (this.isWinningCombination) {
         this.setScore();
       } else if (this.isTie) {
-        this.$emit("tie");
+        this.message = "It's a tie";
+        setTimeout(() => {
+          this.message = "";
+        }, 2000);
         this.setScore();
       } else {
         this.round++;
@@ -117,7 +152,7 @@ export default {
       setTimeout(() => {
         if (!this.isTie) {
           players[this.currentPlayerId].score += 1;
-          this.$emit("pick", this.currentPlayer);
+          this.players[this.currentPlayerId] = this.currentPlayer;
         }
         this.next();
       }, 2000);
@@ -125,16 +160,23 @@ export default {
     next() {
       this.boxes = ["", "", "", "", "", "", "", "", ""];
       if (this.isFinal) {
-        this.$emit("win", this.currentPlayer);
+        this.message = `${this.currentPlayer.avatar} wins! 🎉`;
         this.round = 1;
       }
+    },
+    newGame() {
+      this.players = JSON.parse(JSON.stringify(this.defaultPlayers));
+      this.message = "";
     }
   }
 };
 </script>
 
 <style lang="scss" scoped>
-.playground {
+.tic-tac-toe__board {
+  display: flex;
+}
+.tic-tac-toe__board-playground {
   width: 306px;
   grid-template-columns: repeat(3, 1fr);
   grid-template-rows: repeat(3, 100px);
@@ -178,5 +220,15 @@ export default {
   75% {
     transform: rotate(20deg);
   }
+}
+.tic-tac-toe__result-message {
+  font-size: 6rem;
+  margin: 40px auto;
+}
+.action-button {
+  cursor: pointer;
+  margin: 10px;
+  padding: 5px 10px;
+  font-size: 1rem;
 }
 </style>
