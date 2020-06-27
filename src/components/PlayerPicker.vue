@@ -1,5 +1,5 @@
 <template>
-  <div class="player-picker" @mouseout="$emit('pick', selectedEmoji)">
+  <div class="player-picker" @mouseout="$emit('hover', selectedEmoji)">
     <div
       v-for="(emoji, index) in emojis"
       :key="index"
@@ -7,8 +7,8 @@
       :class="{
         'player-picker__icon--active': selectedEmoji === emoji
       }"
-      @mouseover="$emit('pick', emoji)"
-      @click="selectedEmoji = emoji"
+      @mouseover="$emit('hover', emoji)"
+      @click="selectAvatar(emoji)"
     >
       {{ emoji }}
     </div>
@@ -35,6 +35,12 @@ export default {
   },
   mounted() {
     this.selectedEmoji = this.avatar;
+  },
+  methods: {
+    selectAvatar(avatar) {
+      this.selectedEmoji = avatar;
+      this.$emit("picked", this.selectedEmoji);
+    }
   }
 };
 </script>
@@ -43,6 +49,9 @@ export default {
 .player-picker {
   display: flex;
   flex-wrap: wrap;
+  margin: 0 auto;
+  max-height: 195px;
+  overflow: auto;
 }
 .player-picker__icon {
   font-size: 1.5rem;
