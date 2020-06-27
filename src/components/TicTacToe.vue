@@ -5,11 +5,20 @@
     </button>
     <div class="tic-tac-toe__board">
       <div class="tic-tac-toe__board-player">
-        <PlayerPicker
-          :avatar="players['playerOne'].avatar"
-          @pick="players['playerOne'].avatar = $event"
+        <Player
+          :player="playerOne"
+          :class="{
+            'player--active': currentPlayer.id === PLAYER_ONE_ID,
+            'player--pickable': isFirstRound
+          }"
+          @click.native="toggleShowAvatars(PLAYER_ONE_ID)"
         />
-        <Player :player="players['playerOne']" />
+        <PlayerPicker
+          v-if="playerOneAvatarsShow"
+          :avatar="playerOne.avatar"
+          @hover="setPlayerAvatar($event, PLAYER_ONE_ID)"
+          @picked="onAvatarPicked($event, PLAYER_ONE_ID)"
+        />
       </div>
       <div class="tic-tac-toe__board-playground">
         <div
@@ -34,11 +43,20 @@
         </div>
       </div>
       <div class="tic-tac-toe__board-player">
-        <PlayerPicker
-          :avatar="players['playerTwo'].avatar"
-          @pick="players['playerTwo'].avatar = $event"
+        <Player
+          :player="playerTwo"
+          :class="{
+            'player--active': currentPlayer.id === PLAYER_TWO_ID,
+            'player--pickable': isFirstRound
+          }"
+          @click.native="toggleShowAvatars(PLAYER_TWO_ID)"
         />
-        <Player :player="players['playerTwo']" />
+        <PlayerPicker
+          v-if="playerTwoAvatarsShow"
+          :avatar="playerTwo.avatar"
+          @hover="setPlayerAvatar($event, PLAYER_TWO_ID)"
+          @picked="onAvatarPicked($event, PLAYER_TWO_ID)"
+        />
       </div>
     </div>
     <div class="tic-tac-toe__result-message">{{ message }}</div>
@@ -48,6 +66,7 @@
 <script>
 import Player from "./Player.vue";
 import PlayerPicker from "./PlayerPicker.vue";
+
 export default {
   components: {
     Player,
@@ -63,22 +82,27 @@ export default {
       ],
       message: "",
       round: 1,
-      players: {}
+      players: null,
+      playerOneAvatarsShow: false,
+      playerTwoAvatarsShow: false,
+      isPlayerOneStarting: true
     };
   },
   computed: {
+    PLAYER_ONE_ID: () => "playerOne",
+    PLAYER_TWO_ID: () => "playerTwo",
     defaultPlayers() {
       return {
-        playerOne: {
-          id: "playerOne",
+        [this.PLAYER_ONE_ID]: {
+          id: this.PLAYER_ONE_ID,
           name: "Player One",
-          avatar: "👦",
+          avatar: "🙆",
           score: 0
         },
-        playerTwo: {
-          id: "playerTwo",
+        [this.PLAYER_TWO_ID]: {
+          id: this.PLAYER_TWO_ID,
           name: "Player Two",
-          avatar: "👨‍🦲",
+          avatar: "🙅‍♂️",
           score: 0
         }
       };
@@ -96,12 +120,14 @@ export default {
       ];
     },
     turn() {
-      return this.round % 2 === 0;
+      return this.isPlayerOneStarting
+        ? this.round % 2 !== 0
+        : this.round % 2 === 0;
     },
     currentPlayer() {
       return this.turn && this.players
-        ? this.players.playerOne
-        : this.players.playerTwo;
+        ? this.players[this.PLAYER_ONE_ID]
+        : this.players[this.PLAYER_TWO_ID];
     },
     currentPlayerId() {
       return this.currentPlayer && this.currentPlayer.id;
@@ -116,6 +142,12 @@ export default {
       return this.boxes.reduce((acc, box, idx) => {
         return box && box === this.currentPlayerAvatar ? [...acc, idx] : acc;
       }, []);
+    },
+    playerOne() {
+      return this.players && this.players[this.PLAYER_ONE_ID];
+    },
+    playerTwo() {
+      return this.players && this.players[this.PLAYER_TWO_ID];
     },
     winningCombination() {
       return this.combinations.reduce((acc, combination) => {
@@ -133,6 +165,9 @@ export default {
     },
     isFinal() {
       return this.currentPlayerScore === 3;
+    },
+    isFirstRound() {
+      return this.round === 1;
     }
   },
   created() {
@@ -140,6 +175,8 @@ export default {
   },
   methods: {
     pick(idx) {
+      this.playerOneAvatarsShow = false;
+      this.playerTwoAvatarsShow = false;
       this.boxes.splice(idx, 1, this.currentPlayerAvatar);
       this.check();
     },
@@ -148,7 +185,6 @@ export default {
         this.players[this.currentPlayerId].score += 1;
         if (this.isFinal) {
           this.message = `${this.currentPlayer.avatar} wins! 🎉`;
-          this.round = 1;
         } else {
           this.setTimeoutMessage(`${this.currentPlayer.avatar} scores!`);
         }
@@ -162,6 +198,7 @@ export default {
       this.message = message;
       setTimeout(() => {
         this.message = "";
+        this.isPlayerOneStarting = !this.isPlayerOneStarting;
         this.clearBoard();
       }, 2000);
     },
@@ -169,10 +206,24 @@ export default {
       this.boxes = ["", "", "", "", "", "", "", "", ""];
     },
     newGame() {
-      this.players = JSON.parse(JSON.stringify(this.defaultPlayers));
+      this.players[this.PLAYER_ONE_ID].score = 0;
+      this.players[this.PLAYER_TWO_ID].score = 0;
       this.message = "";
       this.round = 1;
       this.clearBoard();
+    },
+    toggleShowAvatars(playerId) {
+      const show = `${playerId}AvatarsShow`;
+      if (this.isFirstRound) {
+        this[show] = !this[show];
+      }
+    },
+    onAvatarPicked(avatar, playerId) {
+      this.setPlayerAvatar(avatar, playerId);
+      this.toggleShowAvatars(playerId);
+    },
+    setPlayerAvatar(avatar, playerId) {
+      this.players[playerId].avatar = avatar;
     }
   }
 };
@@ -181,7 +232,12 @@ export default {
 <style lang="scss" scoped>
 .tic-tac-toe__board {
   display: flex;
-  align-items: center;
+  justify-content: center;
+  margin-top: 20px;
+}
+.tic-tac-toe__board-player {
+  margin: 0 auto;
+  flex: 1;
 }
 .tic-tac-toe__board-playground {
   width: 306px;
@@ -190,7 +246,8 @@ export default {
   grid-gap: 3px;
   display: grid;
   background-color: #ccc;
-  margin: 60px auto;
+  margin: 0 20px;
+  align-self: center;
 
   &-box {
     background: #fff;
